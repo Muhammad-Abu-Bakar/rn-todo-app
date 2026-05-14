@@ -1,6 +1,12 @@
-import { useState } from 'react';
+// === CHANGED === added useEffect to imports
+import { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
+// === NEW === AsyncStorage import
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// === NEW === storage key in one place — easy to rename later
+const STORAGE_KEY = '@rn_todo_app:todos';
 
 type Todo = {
   id: string;
@@ -11,6 +17,33 @@ type Todo = {
 export default function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState('');
+  // === NEW === tracks whether initial load is finished
+  const [loaded, setLoaded] = useState(false);
+
+  // === NEW === load todos on app start
+  useEffect(() => {
+    const loadTodos = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored !== null) {
+          setTodos(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error('Failed to load todos:', e);
+      } finally {
+        setLoaded(true);
+      }
+    };
+    loadTodos();
+  }, []);
+
+  // === NEW === save todos whenever they change (but only after initial load)
+  useEffect(() => {
+    if (!loaded) return; // don't overwrite storage before we've read it
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(todos)).catch(e =>
+      console.error('Failed to save todos:', e)
+    );
+  }, [todos, loaded]);
 
   const addTodo = () => {
     const text = input.trim();
@@ -20,12 +53,10 @@ export default function App() {
     setInput('');
   };
 
-  // === NEW === toggle done state
   const toggleTodo = (id: string) => {
     setTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
   };
 
-  // === NEW === delete a todo
   const deleteTodo = (id: string) => {
     setTodos(todos.filter(t => t.id !== id));
   };
@@ -53,7 +84,6 @@ export default function App() {
         style={styles.list}
         data={todos}
         keyExtractor={(item) => item.id}
-        // === CHANGED === each item is now interactive
         renderItem={({ item }) => (
           <View style={styles.todoItem}>
             <TouchableOpacity
@@ -74,7 +104,9 @@ export default function App() {
         )}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>No todos yet</Text>
+            <Text style={styles.emptyText}>
+              {loaded ? 'No todos yet' : 'Loading...'}
+            </Text>
           </View>
         }
       />
@@ -92,13 +124,10 @@ const styles = StyleSheet.create({
   addButton: { backgroundColor: '#4a9eff', paddingHorizontal: 20, justifyContent: 'center', borderRadius: 8 },
   addButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   list: { flex: 1 },
-  // === CHANGED === item is now a row with text + delete button
   todoItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2a2a2a', borderRadius: 8, marginBottom: 8 },
   todoTextWrap: { flex: 1, padding: 16 },
   todoText: { color: '#fff', fontSize: 16 },
-  // === NEW === strikethrough + faded color when done
   todoTextDone: { color: '#666', textDecorationLine: 'line-through' },
-  // === NEW === delete button styles
   deleteButton: { paddingHorizontal: 16, paddingVertical: 16 },
   deleteButtonText: { color: '#ff6b6b', fontSize: 18, fontWeight: 'bold' },
   emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
