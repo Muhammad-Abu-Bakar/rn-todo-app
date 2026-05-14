@@ -1,9 +1,8 @@
-// === CHANGED === added useState import
 import { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+// === CHANGED === added FlatList import
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, FlatList } from 'react-native';
 
-// === NEW === type for one todo
 type Todo = {
   id: string;
   text: string;
@@ -11,20 +10,18 @@ type Todo = {
 };
 
 export default function App() {
-  // === NEW === state for todos list and input field
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState('');
 
-  // === NEW === handler to add a todo
   const addTodo = () => {
     const text = input.trim();
-    if (!text) return; // ignore empty input
+    if (!text) return;
     const newTodo: Todo = {
       id: Date.now().toString(),
       text,
       done: false,
     };
-    setTodos([newTodo, ...todos]); // new ones at top
+    setTodos([newTodo, ...todos]);
     setInput('');
   };
 
@@ -37,24 +34,32 @@ export default function App() {
           style={styles.input}
           placeholder="What needs doing?"
           placeholderTextColor="#888"
-          // === CHANGED === controlled input + submit on Enter
           value={input}
           onChangeText={setInput}
           onSubmitEditing={addTodo}
           returnKeyType="done"
         />
-        {/* === CHANGED === button now triggers addTodo */}
         <TouchableOpacity style={styles.addButton} onPress={addTodo}>
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.listArea}>
-        {/* === CHANGED === show count instead of static text */}
-        <Text style={styles.emptyText}>
-          {todos.length === 0 ? 'No todos yet' : `${todos.length} todo(s) added`}
-        </Text>
-      </View>
+      {/* === CHANGED === replaced placeholder with FlatList */}
+      <FlatList
+        style={styles.list}
+        data={todos}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.todoItem}>
+            <Text style={styles.todoText}>{item.text}</Text>
+          </View>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>No todos yet</Text>
+          </View>
+        }
+      />
 
       <StatusBar style="light" />
     </View>
@@ -68,6 +73,10 @@ const styles = StyleSheet.create({
   input: { flex: 1, backgroundColor: '#2a2a2a', color: '#fff', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, marginRight: 8, fontSize: 16 },
   addButton: { backgroundColor: '#4a9eff', paddingHorizontal: 20, justifyContent: 'center', borderRadius: 8 },
   addButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  listArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // === NEW === list + item + empty styles
+  list: { flex: 1 },
+  todoItem: { backgroundColor: '#2a2a2a', padding: 16, borderRadius: 8, marginBottom: 8 },
+  todoText: { color: '#fff', fontSize: 16 },
+  emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
   emptyText: { color: '#666', fontSize: 16 },
 });
